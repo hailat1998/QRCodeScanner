@@ -40,6 +40,7 @@ class QRCodeAnalyzer(
                             // Check if the barcode is within the overlay rectangle
                             barcode.boundingBox?.let { box ->
                                 if (scaledRect.contains(box)) {
+                                    Log.d(TAG, "QR Code detected: ${barcode.rawValue}")
                                     onQRCodeDetected(barcode)
                                 }
                             }
