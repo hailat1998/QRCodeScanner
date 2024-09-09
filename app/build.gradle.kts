@@ -49,5 +49,8 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    implementation("com.google.mlkit:barcode-scanning:17.0.2")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    // https://mvnrepository.com/artifact/com.google.guava/guava
+    implementation("com.google.guava:guava:33.3.0-android")
+
 }

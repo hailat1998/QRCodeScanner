@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
@@ -14,7 +15,12 @@ class QRCodeAnalyzer(
     private val onQRCodeDetected: (Barcode) -> Unit
 ) : ImageAnalysis.Analyzer {
 
-    private val scanner = BarcodeScanning.getClient()
+    private val options = BarcodeScannerOptions.Builder()
+        .setBarcodeFormats(
+            Barcode.FORMAT_QR_CODE)
+        .build()
+
+    private val scanner = BarcodeScanning.getClient(options)
 
     @ExperimentalGetImage
     override fun analyze(imageProxy:ImageProxy) {
@@ -36,15 +42,13 @@ class QRCodeAnalyzer(
             scanner.process(image)
                 .addOnSuccessListener { barcodes ->
                     for (barcode in barcodes) {
-                        if (barcode.valueType == Barcode.TYPE_URL) {
-                            // Check if the barcode is within the overlay rectangle
+                        // Check if the barcode is within the overlay rectangle
                             barcode.boundingBox?.let { box ->
                                 if (scaledRect.contains(box)) {
                                     Log.d(TAG, "QR Code detected: ${barcode.rawValue}")
                                     onQRCodeDetected(barcode)
                                 }
                             }
-                        }
                     }
                 }
                 .addOnFailureListener {
