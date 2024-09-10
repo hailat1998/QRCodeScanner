@@ -10,6 +10,7 @@ import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.SeekBar
@@ -89,7 +90,8 @@ private lateinit var previewView: PreviewView
 
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-        val qrCodeScannerOverlay = QRCodeScannerOverlay(this)
+        val qrCodeScannerOverlay = findViewById<QRCodeScannerOverlay>(R.id.qrCodeScannerOverlay)
+        val barcodeGraphic = findViewById<GraphicOverlay>(R.id.barcodeGraphic)
 
         cameraProviderFuture.addListener({
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
@@ -103,8 +105,15 @@ private lateinit var previewView: PreviewView
                 .build()
                 .also {
                     it.setAnalyzer(ContextCompat.getMainExecutor(this), QRCodeAnalyzer(qrCodeScannerOverlay) { qrCode ->
-                       qrCodeScannerOverlay.visibility = View.GONE
                         Log.d(TAG, "QR Code detected: ${qrCode.rawValue}")
+                        runOnUiThread {
+                            qrCodeScannerOverlay.visibility = View.GONE
+                            barcodeGraphic.clear() // Clear previous graphics
+                            val barcode = BarcodeGraphic(barcodeGraphic, qrCode)
+                            barcodeGraphic.add(barcode)
+                            barcodeGraphic.invalidate() // Force redraw
+                            Toast.makeText(this, "QR Code detected: ${qrCode.rawValue}", Toast.LENGTH_SHORT).show()
+                        }
                     })
                 }
 
@@ -112,8 +121,10 @@ private lateinit var previewView: PreviewView
 
             try {
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview, imageAnalyzer)
+                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalyzer)
+
+                // Set the image source info for the GraphicOverlay
+                barcodeGraphic.setImageSourceInfo(previewView.width, previewView.height, false)
             } catch(exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
             }

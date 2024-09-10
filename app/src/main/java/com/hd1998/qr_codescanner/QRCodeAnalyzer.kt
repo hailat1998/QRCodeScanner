@@ -43,7 +43,7 @@ class QRCodeAnalyzer(
                 .addOnSuccessListener { barcodes ->
                     for (barcode in barcodes) {
                           // Check if the barcode is within the overlay rectangle
-                                    Log.d(TAG, "QR Code detected: ${barcode.rawValue}")
+
                                     onQRCodeDetected(barcode)
                           }
 
