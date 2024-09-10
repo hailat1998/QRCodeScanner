@@ -42,14 +42,11 @@ class QRCodeAnalyzer(
             scanner.process(image)
                 .addOnSuccessListener { barcodes ->
                     for (barcode in barcodes) {
-                        // Check if the barcode is within the overlay rectangle
-                            barcode.boundingBox?.let { box ->
-                                if (scaledRect.contains(box)) {
+                          // Check if the barcode is within the overlay rectangle
                                     Log.d(TAG, "QR Code detected: ${barcode.rawValue}")
                                     onQRCodeDetected(barcode)
-                                }
-                            }
-                    }
+                          }
+
                 }
                 .addOnFailureListener {
                     Log.e(TAG, "QR Code scanning failed: ", it)

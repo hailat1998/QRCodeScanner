@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
+import android.view.View
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.SeekBar
@@ -102,7 +103,7 @@ private lateinit var previewView: PreviewView
                 .build()
                 .also {
                     it.setAnalyzer(ContextCompat.getMainExecutor(this), QRCodeAnalyzer(qrCodeScannerOverlay) { qrCode ->
-                        // Handle QR code result here
+                       qrCodeScannerOverlay.visibility = View.GONE
                         Log.d(TAG, "QR Code detected: ${qrCode.rawValue}")
                     })
                 }
