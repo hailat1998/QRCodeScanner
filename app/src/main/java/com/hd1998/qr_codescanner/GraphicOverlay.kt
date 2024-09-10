@@ -5,7 +5,9 @@ import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.util.AttributeSet
+import android.view.MotionEvent
 import android.view.View
+import android.widget.Toast
 import com.google.common.base.Preconditions
 import com.google.common.primitives.Ints
 import kotlin.math.max
@@ -27,7 +29,7 @@ class GraphicOverlay(context: Context, attrs: AttributeSet) : View(context, attr
 
     abstract class Graphic(private val overlay: GraphicOverlay) {
         abstract fun draw(canvas: Canvas)
-
+        abstract fun drawBtn(canvas: Canvas)
         protected fun drawRect(
             canvas: Canvas, left: Float, top: Float, right: Float, bottom: Float, paint: Paint
         ) {
@@ -174,7 +176,26 @@ class GraphicOverlay(context: Context, attrs: AttributeSet) : View(context, attr
 
             for (graphic in graphics) {
                 graphic.draw(canvas)
+                graphic.drawBtn(canvas)
             }
         }
+    }
+
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        if (event != null) {
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                        performClick()
+                        Toast.makeText(context, "Circle clicked!", Toast.LENGTH_SHORT).show()
+                        return true
+                }
+            }
+        }
+        return super.onTouchEvent(event)
+    }
+
+    override fun performClick(): Boolean {
+        super.performClick()
+        return true
     }
 }

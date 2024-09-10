@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -45,7 +46,6 @@ private lateinit var previewView: PreviewView
     private lateinit var switchButton: ImageButton
     private lateinit var zoomControl: SeekBar
     private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
-    private val REQUEST_CODE_PERMISSIONS = 10
     private var imageCapture: ImageCapture? = null
 
     private val requestPermissionLauncher =

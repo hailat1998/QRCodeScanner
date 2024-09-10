@@ -12,6 +12,26 @@ class BarcodeGraphic(overlay: GraphicOverlay, private val barcode: Barcode?) :
     private val barcodePaint: Paint
     private val labelPaint: Paint
 
+
+    private val textPaint = Paint().apply {
+        color = Color.RED
+        textSize = 36f
+    }
+
+    private val buttonPaint = Paint().apply {
+        color = Color.BLUE
+        style = Paint.Style.FILL
+    }
+
+    private val buttonTextPaint = Paint().apply {
+        color = Color.WHITE
+        textSize = 40f
+        textAlign = Paint.Align.CENTER
+    }
+
+    private lateinit var buttonRect: RectF
+    private var buttonText = "Copy"
+
     init {
         rectPaint.color = MARKER_COLOR
         rectPaint.style = Paint.Style.STROKE
@@ -44,6 +64,27 @@ class BarcodeGraphic(overlay: GraphicOverlay, private val barcode: Barcode?) :
             labelPaint
         )
         barcode.displayValue?.let { canvas.drawText(it, rect.left, rect.top - STROKE_WIDTH, barcodePaint) }
+
+        val bottom = translateY(rect.bottom)
+
+
+    }
+
+    fun isButtonClicked(x: Float, y: Float): Boolean {
+        return ::buttonRect.isInitialized && buttonRect.contains(x, y)
+    }
+
+    override fun drawBtn(canvas: Canvas) {
+        checkNotNull(barcode) { "Attempting to draw a null barcode." }
+        val rect = RectF(barcode.boundingBox)
+        val buttonWidth = 300f
+        val buttonHeight = 100f
+        val buttonLeft = (canvas.width - buttonWidth) / 2
+        val buttonTop = translateY(rect.bottom) + 100f
+        buttonRect = RectF(buttonLeft, buttonTop, buttonLeft + buttonWidth, buttonTop + buttonHeight)
+
+        canvas.drawRoundRect(buttonRect, 20f, 20f, buttonPaint)
+        canvas.drawText(buttonText, buttonRect.centerX(), buttonRect.centerY() + 15f, buttonTextPaint)
     }
 
     companion object {
