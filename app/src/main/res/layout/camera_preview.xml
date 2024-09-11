@@ -11,17 +11,15 @@
         android:layout_height="match_parent"
         app:scaleType="fitCenter" />
 
-    <com.hd1998.qr_codescanner.QRCodeScannerOverlay
+    <com.hd1998.qr_codescanner.camera.QRCodeScannerOverlay
         android:id="@+id/qrCodeScannerOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <com.hd1998.qr_codescanner.GraphicOverlay
+    <com.hd1998.qr_codescanner.camera.GraphicOverlay
         android:id="@+id/barcodeGraphic"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
-
-
 
     <Button
         android:id="@+id/camera_capture_button"

@@ -1,7 +1,10 @@
 package com.hd1998.qr_codescanner
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ContentValues
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -9,10 +12,9 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
-import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.SeekBar
 import android.widget.Toast
@@ -30,6 +32,11 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.hd1998.qr_codescanner.camera.BarcodeGraphic
+import com.hd1998.qr_codescanner.camera.CameraUseCase
+import com.hd1998.qr_codescanner.camera.GraphicOverlay
+import com.hd1998.qr_codescanner.camera.QRCodeAnalyzer
+import com.hd1998.qr_codescanner.camera.QRCodeScannerOverlay
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -74,6 +81,7 @@ private lateinit var previewView: PreviewView
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+        val photoLayout = findViewById<FrameLayout>(R.id.cameraLayout)
         previewView = findViewById(R.id.viewFinder)
         captureButton = findViewById(R.id.camera_capture_button)
         switchButton = findViewById(R.id.camera_switch_button)
@@ -108,11 +116,19 @@ private lateinit var previewView: PreviewView
                         Log.d(TAG, "QR Code detected: ${qrCode.rawValue}")
                         runOnUiThread {
                             qrCodeScannerOverlay.visibility = View.GONE
-                            barcodeGraphic.clear() // Clear previous graphics
+                            barcodeGraphic.clear()
                             val barcode = BarcodeGraphic(barcodeGraphic, qrCode)
                             barcodeGraphic.add(barcode)
-                            barcodeGraphic.invalidate() // Force redraw
-                            Toast.makeText(this, "QR Code detected: ${qrCode.rawValue}", Toast.LENGTH_SHORT).show()
+                            barcodeGraphic.invalidate()
+                            barcodeGraphic.setOnButtonClickListener(object : GraphicOverlay.OnButtonClickListener {
+                                override fun onButtonClicked(graphic: GraphicOverlay.Graphic) {
+                                    when (graphic) {
+                                        is BarcodeGraphic -> {
+                                            copyToClipboard(text = qrCode.rawValue!!, label = "QR Code")
+                                        }
+                                    }
+                                }
+                            })
                         }
                     })
                 }
@@ -203,6 +219,89 @@ private lateinit var previewView: PreviewView
                 // Directly ask for the permission
                 requestPermissionLauncher.launch(Manifest.permission.CAMERA)
             }
+        }
+    }
+   fun copyToClipboard(text: String, label: String ) {
+        val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clipData = ClipData.newPlainText(label, text)
+        clipboardManager.setPrimaryClip(clipData)
+        Toast.makeText(this, "Url copied to clipboard", Toast.LENGTH_SHORT).show()
+    }
+    fun setupCamera(context: Context, useCase: CameraUseCase) {
+
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+
+        cameraProviderFuture.addListener({
+            val cameraProvider = cameraProviderFuture.get()
+            when (useCase) {
+                CameraUseCase.PHOTO_CAPTURE -> setupPhotoCapture(cameraProvider)
+                CameraUseCase.BARCODE_SCANNING -> setupBarcodeScanning(cameraProvider)
+            }
+        }, ContextCompat.getMainExecutor(context))
+    }
+
+    private fun setupBarcodeScanning(cameraProvider: ProcessCameraProvider?) {
+        val qrCodeScannerOverlay = findViewById<QRCodeScannerOverlay>(R.id.qrCodeScannerOverlay)
+        val barcodeGraphic = findViewById<GraphicOverlay>(R.id.barcodeGraphic)
+
+        val imageAnalyzer = ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+            .also {
+                it.setAnalyzer(ContextCompat.getMainExecutor(this), QRCodeAnalyzer(qrCodeScannerOverlay) { qrCode ->
+                    Log.d(TAG, "QR Code detected: ${qrCode.rawValue}")
+                    runOnUiThread {
+                        qrCodeScannerOverlay.visibility = View.GONE
+                        barcodeGraphic.clear()
+                        val barcode = BarcodeGraphic(barcodeGraphic, qrCode)
+                        barcodeGraphic.add(barcode)
+                        barcodeGraphic.invalidate()
+                        barcodeGraphic.setOnButtonClickListener(object : GraphicOverlay.OnButtonClickListener {
+                            override fun onButtonClicked(graphic: GraphicOverlay.Graphic) {
+                                when (graphic) {
+                                    is BarcodeGraphic -> {
+                                        copyToClipboard(text = qrCode.rawValue!!, label = "QR Code")
+                                    }
+                                }
+                            }
+                        })
+                    }
+                })
+            }
+
+        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+        try {
+            cameraProvider?.unbindAll()
+            cameraProvider?.bindToLifecycle(this, cameraSelector, imageAnalyzer)
+
+            // Set the image source info for the GraphicOverlay
+            barcodeGraphic.setImageSourceInfo(previewView.width, previewView.height, false)
+        } catch(exc: Exception) {
+            Log.e(TAG, "Use case binding failed", exc)
+        }
+
+    }
+
+    private fun setupPhotoCapture(cameraProvider: ProcessCameraProvider?) {
+
+
+        val preview = Preview.Builder().build().also {
+            it.setSurfaceProvider(previewView.surfaceProvider)
+        }
+
+        imageCapture = ImageCapture.Builder()
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+            .build()
+
+
+        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+        try {
+            cameraProvider?.unbindAll()
+            cameraProvider?.bindToLifecycle(this, cameraSelector, preview)
+        } catch(exc: Exception) {
+            Log.e(TAG, "Use case binding failed", exc)
         }
     }
 }

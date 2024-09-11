@@ -1,4 +1,4 @@
-package com.hd1998.qr_codescanner
+package com.hd1998.qr_codescanner.camera
 
 import android.graphics.Canvas
 import android.graphics.Color
@@ -70,21 +70,39 @@ class BarcodeGraphic(overlay: GraphicOverlay, private val barcode: Barcode?) :
 
     }
 
-    fun isButtonClicked(x: Float, y: Float): Boolean {
+    override fun initializeButton() {
+        // Initialize the button rect here
+        // You might want to use the overlay's dimensions or other factors to position the button
+        val left = 100f
+        val top = 100f
+        val right = 200f
+        val bottom = 150f
+        buttonRect = RectF(left, top, right, bottom)
+    }
+
+    override fun isButtonClicked(x: Float, y: Float): Boolean {
         return ::buttonRect.isInitialized && buttonRect.contains(x, y)
     }
 
     override fun drawBtn(canvas: Canvas) {
         checkNotNull(barcode) { "Attempting to draw a null barcode." }
-        val rect = RectF(barcode.boundingBox)
-        val buttonWidth = 300f
-        val buttonHeight = 100f
-        val buttonLeft = (canvas.width - buttonWidth) / 2
-        val buttonTop = translateY(rect.bottom) + 100f
-        buttonRect = RectF(buttonLeft, buttonTop, buttonLeft + buttonWidth, buttonTop + buttonHeight)
+        if (::buttonRect.isInitialized) {
+            val rect = RectF(barcode.boundingBox)
+            val buttonWidth = 300f
+            val buttonHeight = 100f
+            val buttonLeft = (canvas.width - buttonWidth) / 2
+            val buttonTop = translateY(rect.bottom) + 100f
+            buttonRect =
+                RectF(buttonLeft, buttonTop, buttonLeft + buttonWidth, buttonTop + buttonHeight)
 
-        canvas.drawRoundRect(buttonRect, 20f, 20f, buttonPaint)
-        canvas.drawText(buttonText, buttonRect.centerX(), buttonRect.centerY() + 15f, buttonTextPaint)
+            canvas.drawRoundRect(buttonRect, 20f, 20f, buttonPaint)
+            canvas.drawText(
+                buttonText,
+                buttonRect.centerX(),
+                buttonRect.centerY() + 15f,
+                buttonTextPaint
+            )
+        }
     }
 
     companion object {

@@ -1,4 +1,4 @@
-package com.hd1998.qr_codescanner
+package com.hd1998.qr_codescanner.camera
 
 import android.graphics.Rect
 import android.util.Log
@@ -9,6 +9,7 @@ import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
+import com.hd1998.qr_codescanner.TAG
 
 class QRCodeAnalyzer(
     private val overlay: QRCodeScannerOverlay,

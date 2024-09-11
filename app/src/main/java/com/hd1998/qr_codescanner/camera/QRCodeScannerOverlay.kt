@@ -1,4 +1,4 @@
-package com.hd1998.qr_codescanner
+package com.hd1998.qr_codescanner.camera
 
 import android.content.Context
 import android.graphics.Canvas

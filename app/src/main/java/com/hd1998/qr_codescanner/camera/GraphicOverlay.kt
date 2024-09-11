@@ -1,4 +1,4 @@
-package com.hd1998.qr_codescanner
+package com.hd1998.qr_codescanner.camera
 
 import android.content.Context
 import android.graphics.Canvas
@@ -7,7 +7,6 @@ import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
-import android.widget.Toast
 import com.google.common.base.Preconditions
 import com.google.common.primitives.Ints
 import kotlin.math.max
@@ -26,6 +25,16 @@ class GraphicOverlay(context: Context, attrs: AttributeSet) : View(context, attr
     private var postScaleHeightOffset: Float = 0f
     private var isImageFlipped: Boolean = false
     private var needUpdateTransformation = true
+
+    interface OnButtonClickListener {
+        fun onButtonClicked(graphic: Graphic)
+    }
+
+    private var onButtonClickListener: OnButtonClickListener? = null
+
+    fun setOnButtonClickListener(listener: OnButtonClickListener) {
+        onButtonClickListener = listener
+    }
 
     abstract class Graphic(private val overlay: GraphicOverlay) {
         abstract fun draw(canvas: Canvas)
@@ -61,6 +70,10 @@ class GraphicOverlay(context: Context, attrs: AttributeSet) : View(context, attr
         fun postInvalidate() {
             overlay.postInvalidate()
         }
+
+        abstract fun initializeButton()
+
+        abstract fun isButtonClicked(x: Float, y: Float): Boolean
 
         fun updatePaintColorByZValue(
             paint: Paint,
@@ -115,6 +128,7 @@ class GraphicOverlay(context: Context, attrs: AttributeSet) : View(context, attr
     fun add(graphic: Graphic) {
         synchronized(lock) {
             graphics.add(graphic)
+            graphic.initializeButton()
         }
     }
 
@@ -181,13 +195,18 @@ class GraphicOverlay(context: Context, attrs: AttributeSet) : View(context, attr
         }
     }
 
-    override fun onTouchEvent(event: MotionEvent?): Boolean {
-        if (event != null) {
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                        performClick()
-                        Toast.makeText(context, "Circle clicked!", Toast.LENGTH_SHORT).show()
-                        return true
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                val x = event.x
+                val y = event.y
+                synchronized(lock) {
+                    for (graphic in graphics.reversed()) {
+                        if (graphic.isButtonClicked(x, y)) {
+                            onButtonClickListener?.onButtonClicked(graphic)
+                            return true
+                        }
+                    }
                 }
             }
         }
