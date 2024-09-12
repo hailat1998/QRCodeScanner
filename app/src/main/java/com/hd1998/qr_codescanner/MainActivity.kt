@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.ContactsContract.Contacts.Photo
 import android.provider.MediaStore
 import android.util.Log
 import android.view.View
@@ -18,6 +19,7 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.SeekBar
 import android.widget.Toast
+import android.widget.ViewSwitcher
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -46,25 +48,22 @@ const val FILENAME_FORMAT ="yyyy-MM-dd'T'HH:mm:ss.SSS"
 
 class MainActivity : AppCompatActivity() {
 
-
-
-private lateinit var previewView: PreviewView
+    private lateinit var previewView: PreviewView
     private lateinit var captureButton: Button
     private lateinit var switchButton: ImageButton
+    private lateinit var imageButtonPhoto: ImageButton
+    private lateinit var imageButtonQr: ImageButton
+    private lateinit var photoView: FrameLayout
+    private lateinit var barView: FrameLayout
     private lateinit var zoomControl: SeekBar
-    private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
     private var imageCapture: ImageCapture? = null
+    var useCase = CameraUseCase.BARCODE_SCANNING
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (isGranted) {
-                // Permission is granted. Continue the action or workflow in your app.
-                startCamera()
+               setupCamera(this, useCase )
             } else {
-                // Explain to the user that the feature is unavailable because the
-                // features requires a permission that the user has denied. At the
-                // same time, respect the user's decision. Don't link to system
-                // settings in an effort to convince the user to change their decision.
                 Toast.makeText(this, "Camera permission is required to use this feature", Toast.LENGTH_LONG).show()
             }
         }
@@ -82,77 +81,48 @@ private lateinit var previewView: PreviewView
             insets
         }
         val photoLayout = findViewById<FrameLayout>(R.id.cameraLayout)
+        imageButtonQr = findViewById(R.id.switch_button_qr)
+        imageButtonPhoto = findViewById(R.id.switch_button_photo)
         previewView = findViewById(R.id.viewFinder)
         captureButton = findViewById(R.id.camera_capture_button)
         switchButton = findViewById(R.id.camera_switch_button)
         zoomControl = findViewById(R.id.zoom_control)
+        barView = findViewById(R.id.bar_part)
+        photoView = findViewById(R.id.photo_part)
+
+        if(useCase == CameraUseCase.BARCODE_SCANNING){
+            photoView.visibility = View.GONE
+        } else {
+            barView.visibility = View.GONE
+        }
 
         captureButton.setOnClickListener { takePhoto() }
         switchButton.setOnClickListener { switchCamera() }
-        startCamera()
+
+        imageButtonPhoto.setOnClickListener {
+            barView.visibility = View.GONE
+            photoView.visibility = View.VISIBLE
+            useCase = CameraUseCase.BARCODE_SCANNING
+            setupCamera(this, useCase)
+        }
+
+        imageButtonQr.setOnClickListener {
+            photoView.visibility = View.GONE
+            barView.visibility = View.VISIBLE
+            useCase = CameraUseCase.PHOTO_CAPTURE
+            setupCamera(this, useCase)
+        }
+        setupCamera(this, useCase)
     }
 
-    private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
-        ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
-    }
-
-    private fun startCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-        val qrCodeScannerOverlay = findViewById<QRCodeScannerOverlay>(R.id.qrCodeScannerOverlay)
-        val barcodeGraphic = findViewById<GraphicOverlay>(R.id.barcodeGraphic)
-
-        cameraProviderFuture.addListener({
-            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-
-            val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(previewView.surfaceProvider)
-            }
-
-            val imageAnalyzer = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-                .also {
-                    it.setAnalyzer(ContextCompat.getMainExecutor(this), QRCodeAnalyzer(qrCodeScannerOverlay) { qrCode ->
-                        Log.d(TAG, "QR Code detected: ${qrCode.rawValue}")
-                        runOnUiThread {
-                            qrCodeScannerOverlay.visibility = View.GONE
-                            barcodeGraphic.clear()
-                            val barcode = BarcodeGraphic(barcodeGraphic, qrCode)
-                            barcodeGraphic.add(barcode)
-                            barcodeGraphic.invalidate()
-                            barcodeGraphic.setOnButtonClickListener(object : GraphicOverlay.OnButtonClickListener {
-                                override fun onButtonClicked(graphic: GraphicOverlay.Graphic) {
-                                    when (graphic) {
-                                        is BarcodeGraphic -> {
-                                            copyToClipboard(text = qrCode.rawValue!!, label = "QR Code")
-                                        }
-                                    }
-                                }
-                            })
-                        }
-                    })
-                }
-
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-            try {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalyzer)
-
-                // Set the image source info for the GraphicOverlay
-                barcodeGraphic.setImageSourceInfo(previewView.width, previewView.height, false)
-            } catch(exc: Exception) {
-                Log.e(TAG, "Use case binding failed", exc)
-            }
-
-        }, ContextCompat.getMainExecutor(this))
+    override fun onResume() {
+        super.onResume()
+        setupCamera(this, useCase)
     }
 
     private fun takePhoto() {
-        // Get a stable reference of the modifiable image capture use case
-        val imageCapture = imageCapture ?: return
+       val imageCapture = imageCapture ?: return
 
-        // Create time stamped name and MediaStore entry.
         val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US)
             .format(System.currentTimeMillis())
         val contentValues = ContentValues().apply {
@@ -162,15 +132,12 @@ private lateinit var previewView: PreviewView
                 put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraX-Image")
             }
         }
-
-        // Create output options object which contains file + metadata
         val outputOptions = ImageCapture.OutputFileOptions
             .Builder(contentResolver,
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                 contentValues)
             .build()
 
-        // Set up image capture listener, which is triggered after photo has been taken
         imageCapture.takePicture(
             outputOptions,
             ContextCompat.getMainExecutor(this),
@@ -197,12 +164,9 @@ private lateinit var previewView: PreviewView
                 this,
                 Manifest.permission.CAMERA
             ) == PackageManager.PERMISSION_GRANTED -> {
-                // Permission is already granted, proceed with the camera operation
-                startCamera()
+               setupCamera(this, useCase)
             }
             shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) -> {
-                // Provide an additional rationale to the user if the permission was not granted
-                // and the user would benefit from additional context for the use of the permission.
                 AlertDialog.Builder(this)
                     .setTitle("Camera Permission Required")
                     .setMessage("The camera permission is required to use this feature. Please grant the permission.")
@@ -216,7 +180,6 @@ private lateinit var previewView: PreviewView
                     .show()
             }
             else -> {
-                // Directly ask for the permission
                 requestPermissionLauncher.launch(Manifest.permission.CAMERA)
             }
         }
@@ -229,8 +192,8 @@ private lateinit var previewView: PreviewView
     }
     fun setupCamera(context: Context, useCase: CameraUseCase) {
 
+        Log.i(TAG, "SetUp")
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
             when (useCase) {
@@ -243,6 +206,12 @@ private lateinit var previewView: PreviewView
     private fun setupBarcodeScanning(cameraProvider: ProcessCameraProvider?) {
         val qrCodeScannerOverlay = findViewById<QRCodeScannerOverlay>(R.id.qrCodeScannerOverlay)
         val barcodeGraphic = findViewById<GraphicOverlay>(R.id.barcodeGraphic)
+
+        val preview = Preview.Builder().build().also {
+            it.setSurfaceProvider(previewView.surfaceProvider)
+        }
+
+        Log.i(TAG, "BARCODE")
 
         val imageAnalyzer = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -273,9 +242,7 @@ private lateinit var previewView: PreviewView
 
         try {
             cameraProvider?.unbindAll()
-            cameraProvider?.bindToLifecycle(this, cameraSelector, imageAnalyzer)
-
-            // Set the image source info for the GraphicOverlay
+            cameraProvider?.bindToLifecycle(this, cameraSelector, imageAnalyzer, preview)
             barcodeGraphic.setImageSourceInfo(previewView.width, previewView.height, false)
         } catch(exc: Exception) {
             Log.e(TAG, "Use case binding failed", exc)
@@ -285,21 +252,18 @@ private lateinit var previewView: PreviewView
 
     private fun setupPhotoCapture(cameraProvider: ProcessCameraProvider?) {
 
+        Log.i(TAG, "PHOTO")
 
         val preview = Preview.Builder().build().also {
             it.setSurfaceProvider(previewView.surfaceProvider)
         }
-
         imageCapture = ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
             .build()
-
-
         val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
         try {
             cameraProvider?.unbindAll()
-            cameraProvider?.bindToLifecycle(this, cameraSelector, preview)
+            cameraProvider?.bindToLifecycle(this, cameraSelector, preview, imageCapture)
         } catch(exc: Exception) {
             Log.e(TAG, "Use case binding failed", exc)
         }

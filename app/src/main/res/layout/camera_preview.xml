@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/cameraLayout"
     android:layout_width="match_parent"
+    android:id="@+id/cameraLayout"
     android:layout_height="match_parent">
 
     <androidx.camera.view.PreviewView
@@ -10,6 +11,20 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:scaleType="fitCenter" />
+
+
+     <FrameLayout
+         android:layout_width="match_parent"
+         android:layout_height="match_parent"
+         android:id="@+id/bar_part">
+
+         <ImageButton
+             android:id="@+id/switch_button_photo"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:layout_gravity="top|start"
+             android:layout_margin="20dp"
+             android:src="@drawable/baseline_photo_camera_24" />
 
     <com.hd1998.qr_codescanner.camera.QRCodeScannerOverlay
         android:id="@+id/qrCodeScannerOverlay"
@@ -20,6 +35,13 @@
         android:id="@+id/barcodeGraphic"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
+     </FrameLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/photo_part">
+
 
     <Button
         android:id="@+id/camera_capture_button"
@@ -37,10 +59,19 @@
         android:layout_margin="20dp"
         android:src="@drawable/baseline_camera_front_24" />
 
+        <ImageButton
+            android:id="@+id/switch_button_qr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:layout_margin="20dp"
+            android:src="@drawable/qr_code_scanner_24px" />
+
     <SeekBar
         android:id="@+id/zoom_control"
         android:layout_width="200dp"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:layout_margin="20dp" />
+    </FrameLayout>
 </FrameLayout>
