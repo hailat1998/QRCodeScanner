@@ -12,7 +12,6 @@ import com.google.mlkit.vision.common.InputImage
 import com.hd1998.qr_codescanner.TAG
 
 class QRCodeAnalyzer(
-    private val overlay: QRCodeScannerOverlay,
     private val onQRCodeDetected: (Barcode) -> Unit
 ) : ImageAnalysis.Analyzer {
 
@@ -33,9 +32,7 @@ class QRCodeAnalyzer(
             scanner.process(image)
                 .addOnSuccessListener { barcodes ->
                     for (barcode in barcodes) {
-                          // Check if the barcode is within the overlay rectangle
-
-                                    onQRCodeDetected(barcode)
+                        onQRCodeDetected(barcode)
                           }
 
                 }

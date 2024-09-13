@@ -10,7 +10,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.provider.ContactsContract.Contacts.Photo
 import android.provider.MediaStore
 import android.util.Log
 import android.view.View
@@ -19,7 +18,6 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.SeekBar
 import android.widget.Toast
-import android.widget.ViewSwitcher
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -38,13 +36,16 @@ import com.hd1998.qr_codescanner.camera.BarcodeGraphic
 import com.hd1998.qr_codescanner.camera.CameraUseCase
 import com.hd1998.qr_codescanner.camera.GraphicOverlay
 import com.hd1998.qr_codescanner.camera.QRCodeAnalyzer
-import com.hd1998.qr_codescanner.camera.QRCodeScannerOverlay
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 
 const val TAG = "MAIN"
 const val FILENAME_FORMAT ="yyyy-MM-dd'T'HH:mm:ss.SSS"
+enum class CAMERA{
+    FRONT,
+    REAR
+}
 
 class MainActivity : AppCompatActivity() {
 
@@ -55,14 +56,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var imageButtonQr: ImageButton
     private lateinit var photoView: FrameLayout
     private lateinit var barView: FrameLayout
-    private lateinit var zoomControl: SeekBar
     private var imageCapture: ImageCapture? = null
     var useCase = CameraUseCase.BARCODE_SCANNING
+    var camera = CAMERA.REAR
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (isGranted) {
-               setupCamera(this, useCase )
+               setupCamera(this, useCase, camera )
             } else {
                 Toast.makeText(this, "Camera permission is required to use this feature", Toast.LENGTH_LONG).show()
             }
@@ -86,7 +87,6 @@ class MainActivity : AppCompatActivity() {
         previewView = findViewById(R.id.viewFinder)
         captureButton = findViewById(R.id.camera_capture_button)
         switchButton = findViewById(R.id.camera_switch_button)
-        zoomControl = findViewById(R.id.zoom_control)
         barView = findViewById(R.id.bar_part)
         photoView = findViewById(R.id.photo_part)
 
@@ -97,27 +97,30 @@ class MainActivity : AppCompatActivity() {
         }
 
         captureButton.setOnClickListener { takePhoto() }
-        switchButton.setOnClickListener { switchCamera() }
+        switchButton.setOnClickListener {
+                    switchCamera()
+                    setupCamera(this, useCase, camera)
+        }
 
         imageButtonPhoto.setOnClickListener {
             barView.visibility = View.GONE
             photoView.visibility = View.VISIBLE
-            useCase = CameraUseCase.BARCODE_SCANNING
-            setupCamera(this, useCase)
+            useCase = CameraUseCase.PHOTO_CAPTURE
+            setupCamera(this, useCase, camera)
         }
 
         imageButtonQr.setOnClickListener {
             photoView.visibility = View.GONE
             barView.visibility = View.VISIBLE
-            useCase = CameraUseCase.PHOTO_CAPTURE
-            setupCamera(this, useCase)
+            useCase = CameraUseCase.BARCODE_SCANNING
+            setupCamera(this, useCase, camera)
         }
-        setupCamera(this, useCase)
+        setupCamera(this, useCase, camera)
     }
 
     override fun onResume() {
         super.onResume()
-        setupCamera(this, useCase)
+        setupCamera(this, useCase, camera)
     }
 
     private fun takePhoto() {
@@ -155,7 +158,7 @@ class MainActivity : AppCompatActivity() {
         )
     }
     private fun switchCamera() {
-        // Implement camera switching
+       camera = if(camera == CAMERA.REAR) CAMERA.FRONT else CAMERA.REAR
     }
 
     private fun checkCameraPermission() {
@@ -164,7 +167,7 @@ class MainActivity : AppCompatActivity() {
                 this,
                 Manifest.permission.CAMERA
             ) == PackageManager.PERMISSION_GRANTED -> {
-               setupCamera(this, useCase)
+               setupCamera(this, useCase, camera)
             }
             shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) -> {
                 AlertDialog.Builder(this)
@@ -190,21 +193,20 @@ class MainActivity : AppCompatActivity() {
         clipboardManager.setPrimaryClip(clipData)
         Toast.makeText(this, "Url copied to clipboard", Toast.LENGTH_SHORT).show()
     }
-    fun setupCamera(context: Context, useCase: CameraUseCase) {
+    fun setupCamera(context: Context, useCase: CameraUseCase, camera: CAMERA) {
 
         Log.i(TAG, "SetUp")
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
             when (useCase) {
-                CameraUseCase.PHOTO_CAPTURE -> setupPhotoCapture(cameraProvider)
+                CameraUseCase.PHOTO_CAPTURE -> setupPhotoCapture(cameraProvider, camera)
                 CameraUseCase.BARCODE_SCANNING -> setupBarcodeScanning(cameraProvider)
             }
         }, ContextCompat.getMainExecutor(context))
     }
 
     private fun setupBarcodeScanning(cameraProvider: ProcessCameraProvider?) {
-        val qrCodeScannerOverlay = findViewById<QRCodeScannerOverlay>(R.id.qrCodeScannerOverlay)
         val barcodeGraphic = findViewById<GraphicOverlay>(R.id.barcodeGraphic)
 
         val preview = Preview.Builder().build().also {
@@ -217,10 +219,9 @@ class MainActivity : AppCompatActivity() {
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
             .also {
-                it.setAnalyzer(ContextCompat.getMainExecutor(this), QRCodeAnalyzer(qrCodeScannerOverlay) { qrCode ->
+                it.setAnalyzer(ContextCompat.getMainExecutor(this), QRCodeAnalyzer { qrCode ->
                     Log.d(TAG, "QR Code detected: ${qrCode.rawValue}")
                     runOnUiThread {
-                        qrCodeScannerOverlay.visibility = View.GONE
                         barcodeGraphic.clear()
                         val barcode = BarcodeGraphic(barcodeGraphic, qrCode)
                         barcodeGraphic.add(barcode)
@@ -250,7 +251,7 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun setupPhotoCapture(cameraProvider: ProcessCameraProvider?) {
+    private fun setupPhotoCapture(cameraProvider: ProcessCameraProvider?, camera: CAMERA) {
 
         Log.i(TAG, "PHOTO")
 
@@ -260,7 +261,7 @@ class MainActivity : AppCompatActivity() {
         imageCapture = ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
             .build()
-        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+        val cameraSelector = if(camera == CAMERA.REAR) CameraSelector.DEFAULT_BACK_CAMERA else CameraSelector.DEFAULT_FRONT_CAMERA
         try {
             cameraProvider?.unbindAll()
             cameraProvider?.bindToLifecycle(this, cameraSelector, preview, imageCapture)
