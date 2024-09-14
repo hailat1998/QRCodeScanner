@@ -66,8 +66,6 @@ class BarcodeGraphic(overlay: GraphicOverlay, private val barcode: Barcode?) :
         barcode.displayValue?.let { canvas.drawText(it, rect.left, rect.top - STROKE_WIDTH, barcodePaint) }
 
         val bottom = translateY(rect.bottom)
-
-
     }
 
     override fun initializeButton() {

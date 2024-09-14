@@ -26,6 +26,15 @@
              android:layout_margin="20dp"
              android:src="@drawable/baseline_photo_camera_24" />
 
+         <TextView
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="Roll to the QR-code in order to scan and the get URL"
+             android:textSize="26sp"
+             android:layout_margin="20dp"
+             android:layout_gravity="bottom|center"/>
+
+
     <com.hd1998.qr_codescanner.camera.GraphicOverlay
         android:id="@+id/barcodeGraphic"
         android:layout_width="match_parent"

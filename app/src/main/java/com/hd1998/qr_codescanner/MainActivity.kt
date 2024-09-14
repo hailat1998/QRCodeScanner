@@ -191,7 +191,6 @@ class MainActivity : AppCompatActivity() {
         val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clipData = ClipData.newPlainText(label, text)
         clipboardManager.setPrimaryClip(clipData)
-        Toast.makeText(this, "Url copied to clipboard", Toast.LENGTH_SHORT).show()
     }
     fun setupCamera(context: Context, useCase: CameraUseCase, camera: CAMERA) {
 
