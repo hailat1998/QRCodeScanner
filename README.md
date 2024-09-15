@@ -16,4 +16,4 @@ A QR code scanner for Android, made using Google ML Kit and CameraX. In addition
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE.md) file for details.
