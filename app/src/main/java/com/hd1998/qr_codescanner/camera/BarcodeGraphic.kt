@@ -19,7 +19,7 @@ class BarcodeGraphic(overlay: GraphicOverlay, private val barcode: Barcode?) :
     }
 
     private val buttonPaint = Paint().apply {
-        color = Color.BLUE
+        color = Color.GRAY
         style = Paint.Style.FILL
     }
 
