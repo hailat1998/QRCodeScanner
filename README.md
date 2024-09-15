@@ -10,9 +10,9 @@ A QR code scanner for Android, made using Google ML Kit and CameraX. In addition
 
 ## Screenshots
 
-![App Screenshot](screenshot/Screenshot_20240915_114310_QR-code Scanner.jpg)
+![App Screenshot](/screenshot/Screenshot_20240915_114310_QR-codeScanner.jpg)
 
-![App Screenshot](screenshot/Screenshot_20240915_114336_QR-code Scanner.jpg)
+![App Screenshot](/screenshot/Screenshot_20240915_114336_QR-codeScanner.jpg)
 
 ## License
 
